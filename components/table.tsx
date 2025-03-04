@@ -5,7 +5,7 @@ import RefreshButton from './refresh-button';
 import { seed } from '@/lib/seed';
 import { trace } from '@opentelemetry/api';
 
-const tracer = trace.getTracer('custom-tracer');
+const tracer = trace.getTracer('components.table');
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
@@ -13,7 +13,7 @@ export default async function Table() {
   let data;
   let startTime = Date.now();
 
-  let loadSpan = tracer.startSpan('load-profiles');
+  let loadSpan = tracer.startSpan('profiles.select');
   try {
     data = await sql`SELECT * FROM profiles`;
     loadSpan.end();
@@ -24,11 +24,11 @@ export default async function Table() {
         'Table does not exist, creating and seeding it with dummy data now...'
       );
       // Table is not created yet
-      const seedSpan = tracer.startSpan('seed-profiles');
+      const seedSpan = tracer.startSpan('profiles.seed');
       await seed();
       seedSpan.end();
       startTime = Date.now();
-      loadSpan = tracer.startSpan('load-profiles');
+      loadSpan = tracer.startSpan('profiles.select');
       data = await sql`SELECT * FROM profiles`;
     } else {
       throw e;

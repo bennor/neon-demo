@@ -1,12 +1,12 @@
 import postgres from 'postgres';
 import { trace } from '@opentelemetry/api';
 
-const tracer = trace.getTracer('custom-tracer');
+const tracer = trace.getTracer('lib.seed');
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
 export async function seed() {
-  const createTableSpan = tracer.startSpan('create-profiles-table');
+  const createTableSpan = tracer.startSpan('profiles.create-table');
   const createTable = await sql`
     CREATE TABLE IF NOT EXISTS profiles (
       id SERIAL PRIMARY KEY,
@@ -19,7 +19,7 @@ export async function seed() {
   createTableSpan.end();
   console.log(`Created "profiles" table`);
 
-  const createProfilesSpan = tracer.startSpan('insert-profiles');
+  const createProfilesSpan = tracer.startSpan('profiles.insert');
   const profiles = await Promise.all([
     sql`
           INSERT INTO profiles (name, email, image)
