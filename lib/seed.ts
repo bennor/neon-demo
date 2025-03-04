@@ -1,8 +1,12 @@
-import postgres from 'postgres'
+import postgres from 'postgres';
+import { trace } from '@opentelemetry/api';
 
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' })
+const tracer = trace.getTracer('custom-tracer');
+
+const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
 export async function seed() {
+  const createTableSpan = tracer.startSpan('create-profiles-table');
   const createTable = await sql`
     CREATE TABLE IF NOT EXISTS profiles (
       id SERIAL PRIMARY KEY,
@@ -11,10 +15,11 @@ export async function seed() {
       image VARCHAR(255),
       "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
-    `
+    `;
+  createTableSpan.end();
+  console.log(`Created "profiles" table`);
 
-  console.log(`Created "profiles" table`)
-
+  const createProfilesSpan = tracer.startSpan('insert-profiles');
   const profiles = await Promise.all([
     sql`
           INSERT INTO profiles (name, email, image)
@@ -30,12 +35,13 @@ export async function seed() {
           INSERT INTO profiles (name, email, image)
           VALUES ('Steven Tey', 'stey@vercel.com', 'https://images.ctfassets.net/e5382hct74si/4QEuVLNyZUg5X6X4cW4pVH/eb7cd219e21b29ae976277871cd5ca4b/profile.jpg')
           ON CONFLICT (email) DO NOTHING;
-      `,
-  ])
-  console.log(`Seeded ${profiles.length} profiles`)
+      `
+  ]);
+  createProfilesSpan.end();
+  console.log(`Seeded ${profiles.length} profiles`);
 
   return {
     createTable,
-    profiles,
-  }
+    profiles
+  };
 }
